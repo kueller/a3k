@@ -106,6 +106,8 @@ Format: `ldi r[dest], imm`
 
 ### BLZ
 
+***Note: All offsets are signed.***
+
 Description: Jumps to the instruction specified by ***label*** if the value
 in R0 is less than zero.
 
