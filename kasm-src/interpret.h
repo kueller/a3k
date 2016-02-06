@@ -27,16 +27,5 @@ void index_in_range(int);
  * Finally, verifies the instruction has the right number of tokens.
  */
 void setup_instruction_list(InstructionList *);
-#if 0
-void kasm_add(int *, char *, char *, char *);
-void kasm_addi(int *, char *, char *, char *);
-void kasm_and(int *, char *, char *, char *);
-void kasm_inv(int *, char *);
-void kasm_mult(int *, char *, char *, char *);
-void kasm_div(int *, char *, char *, char *);
-void kasm_mod(int *, char *, char *, char *);
-void kasm_ld(int *, char *, char *);
-int kasm_branch(int *, OpCode, InstructionList *, char *);
-void kasm_jmp(InstructionList *, char *);
-#endif
+
 #endif
