@@ -8,6 +8,7 @@ language. Mostly useless and made just for fun.
 It features two programs:
 
 **kasm**: Command line program to assemble a text source file to binary.
+
 **a3k**: Graphical Qt frontend to run the binary. Pictured above.
 
 ## Instruction Set
@@ -21,7 +22,7 @@ etc.
 
 Everything is case insensitive.
 
-For an example, see the [example file](example/fb.asm).
+For an example, see the [example file](example/fizzbuzz.asm).
 
 ### ADD
 
