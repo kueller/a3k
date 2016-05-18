@@ -1,4 +1,4 @@
-SOURCE = split.c instructions.c interpret.c fileread.c assemble.c kasm.c
+SOURCE = split.c instructions.c variables.c interpret.c fileread.c assemble.c kasm.c
 BINARY = kasm
 CC     = gcc
 CFLAGS = -Wall -v

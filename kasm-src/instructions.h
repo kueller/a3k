@@ -4,28 +4,31 @@
 #include "split.h"
 #include "kasm.h"
 
-typedef enum _OpCode_ {
-	INVALID = -1,
-	ADD = 0b0001,
-	ADDI = 0b0010,
-	AND = 0b0011,
-	INV = 0b0100,
-	MULT = 0b0101,
-	DIV = 0b0110,
-	MOD = 0b0111,
-	LDI = 0b1000,
-	BLZ = 0b1001,
-	BEZ = 0b1010,
-	BGZ = 0b1011,
-	JMP = 0b1100,
-	JSR = 0b1101,
-	RET = 0b1110,
-	END = 0b1111
-} OpCode;
+typedef enum _OpCode1_ {
+	INVALID    = -1,
+	ARITHMETIC = 0b00000,
+	BITWISE    = 0b00001,
+	MEM        = 0b00010,
+	SHIFT      = 0b00011,
+	JUMP       = 0b00100,
+	END        = 0b11111
+} OpCode_1;
+
+typedef enum _OpCode2_ {
+	OP2_0 = 0b000,
+	OP2_1 = 0b001,
+	OP2_2 = 0b010,
+	OP2_3 = 0b011,
+	OP2_4 = 0b100,
+	OP2_5 = 0b101,
+	OP2_6 = 0b110,
+	OP2_7 = 0b111
+} OpCode_2;
 
 
 typedef struct _inst_ {
-	OpCode op;           // The bitwise opcode for the instruction
+	OpCode_1 op1;        // The bitwise opcode for the instruction
+	OpCode_2 op2;        // The 2nd part of the opcode
 	char *label;         // Separated label for jump instructions.
 	StringList *list;    // Tokenized split string for the instruction line
 
@@ -41,12 +44,15 @@ typedef struct _inst_list_ {
 	Instruction *end;
 	Instruction *pc;
 
+	StringList *var_list;
+
 	int size;
 } InstructionList;
 
 // Instruction and Instruction List functions. Straightforward.
 Instruction *new_instruction();
 InstructionList *new_instruction_list();
+void instruction_list_remove(InstructionList *, int index);
 void instruction_list_free(InstructionList *);
 void instruction_append(InstructionList *, Instruction *);
 

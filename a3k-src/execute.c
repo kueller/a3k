@@ -1,8 +1,8 @@
 #include "execute.h"
 
-static int pc = 0;
+static uint32_t pc = 0;
 
-int current_pc()
+uint32_t current_pc()
 {
 	return pc;
 }
@@ -12,26 +12,26 @@ void reset_pc()
 	pc = 0;
 }
 
-int16_t extend_imm(uint16_t imm, int len)
+int32_t extend_imm(int imm, int len)
 {
-	int16_t ret;
+	int32_t ret;
 
-	switch(len)
-	case 6: {
-		if ((imm >> 5) & 0x1)
-			ret = imm | IMM6_EXT;
+	switch(len) {
+	case 14: 
+		if ((imm >> 13) & 0x1)
+			ret = imm | IMM_EXT14;
 		else
 			ret = imm;
 		break;
-	case 9:
-		if ((imm >> 8) & 0x1)
-			ret = imm | IMM9_EXT;
+	case 19:
+		if ((imm >> 18) & 0x1)
+			ret = imm | IMM_EXT19;
 		else
 			ret = imm;
 		break;
-	case 12:
-		if ((imm >> 11) & 0x1)
-			ret = imm | IMM12_EXT;
+	case 24:
+		if ((imm >> 23) & 0x1)
+			ret = imm | IMM_EXT24;
 		else
 			ret = imm;
 		break;
@@ -42,139 +42,218 @@ int16_t extend_imm(uint16_t imm, int len)
 	return ret;
 }
 
-int execute_next(uint16_t *isr, int *reg)
+int execute_next(uint32_t *mem, uint32_t *reg)
 {
-	if (!isr || !reg) return IDLE;
-	if (pc >= isr_length()) return IDLE;
+	if (!mem || !reg) return A3K_MEM_ERR;
+	if (pc >= current_mem_size()) return A3K_OUT_OF_RANGE;
 	
-	uint16_t insn = isr[pc];
+	uint32_t insn = mem[pc];
 
-	int status = IDLE;
+	int status = A3K_IDLE;
 
-	int src1 = 0;
-	int src2 = 0;
-	int dest = 0;
+	int dest = (insn >> 8) & REG_MASK;
+	int src1 = (insn >> 13) & REG_MASK;
+	int src2 = (insn >> 18) & REG_MASK;
 
-	int16_t imm = 0;
+	int32_t imm14 = extend_imm((insn >> 18), 14);
+	int32_t imm19 = extend_imm((insn >> 13), 19);
 
-	switch (insn & OP_MASK) {
-	case ADD:
-		src1 = (insn >> 7) & REG_MASK;
-		src2 = (insn >> 4) & REG_MASK;
-		dest = (insn >> 10) & REG_MASK;
+	uint32_t imm_addr = insn >> 13;
 
-		reg[dest] = reg[src1] + reg[src2];
-		status = RUNNING;
-		pc++;
-		break;
-	case ADDI:
-		src1 = (insn >> 4) & REG_MASK;
-		dest = (insn >> 7) & REG_MASK;
+	int32_t imm_offset = extend_imm((insn >> 8), 24);
 
-		imm = extend_imm(insn >> 10, 6);
+	int op1 = insn & OP_MASK;
+	int op2 = (insn >> 5) & OP2_MASK;
 
-		reg[dest] = reg[src1] + imm;
-		status = RUNNING;
-		pc++;
-		break;
-	case AND:
-		src1 = (insn >> 7) & REG_MASK;
-		src2 = (insn >> 4) & REG_MASK;
-		dest = (insn >> 10) & REG_MASK;
-
-		reg[dest] = reg[src1] & reg[src2];
-		status = RUNNING;
-		pc++;
-		break;
-	case INV:
-		src1 = (insn >> 4) & REG_MASK;
-		reg[src1] = reg[src1] * -1;
-
-		status = RUNNING;
-		pc++;
-		break;
-	case MULT:
-		src1 = (insn >> 7) & REG_MASK;
-		src2 = (insn >> 4) & REG_MASK;
-		dest = (insn >> 10) & REG_MASK;
-
-		reg[dest] = reg[src1] * reg[src2];
-		status = RUNNING;
-		pc++;
-		break;
-	case DIV:
-		src1 = (insn >> 7) & REG_MASK;
-		src2 = (insn >> 4) & REG_MASK;
-		dest = (insn >> 10) & REG_MASK;
-
-		reg[dest] = reg[src1] / reg[src2];
-		status = RUNNING;
-		pc++;
-		break;
-	case MOD:
-		src1 = (insn >> 7) & REG_MASK;
-		src2 = (insn >> 4) & REG_MASK;
-		dest = (insn >> 10) & REG_MASK;
-
-		reg[dest] = reg[src1] % reg[src2];
-		status = RUNNING;
-		pc++;
-		break;
-	case LDI:
-		dest = (insn >> 4) & REG_MASK;
-		imm = extend_imm(insn >> 7, 9);
-
-		reg[dest] = imm;
-		status = RUNNING;
-		pc++;
-		break;
-	case BLZ:
-		if (reg[0] < 0) {
-			imm = extend_imm(insn >> 4, 12);
-			pc = pc + imm;
-		} else {
-			pc++;
+	if (op1 == ARITHMETIC) {
+		switch (op2) {
+		case OP2_0: // ADD
+			reg[dest] = (int32_t)reg[src1] + (int32_t)reg[src2];
+			status = A3K_RUNNING;
+			break;
+		case OP2_1: // ADDI
+			reg[dest] = reg[src1] + (int32_t)imm14;
+			status = A3K_RUNNING;
+			break;
+		case OP2_2: // SUB
+			reg[dest] = (int32_t)reg[src1] - (int32_t)reg[src2];
+			status = A3K_RUNNING;
+			break;
+		case OP2_3: // SUBI
+			reg[dest] = reg[src1] - (int32_t)imm14;
+			status = A3K_RUNNING;
+			break;
+		case OP2_4: // MULT
+			reg[dest] = (int32_t)reg[src1] * (int32_t)reg[src2];
+			status = A3K_RUNNING;
+			break;
+		case OP2_5: // DIV
+		{
+			if (reg[src2] == 0) {
+				status = A3K_DIVIDE_BY_ZERO;
+			} else {
+				reg[dest] = (int32_t)reg[src1] / (int32_t)reg[src2];
+				status = A3K_RUNNING;
+			}
+			break;
 		}
-		status = RUNNING;
-		break;
-	case BEZ:
-		if (reg[0] == 0) {
-			imm = extend_imm(insn >> 4, 12);
-			pc = pc + imm;
-		} else {
-			pc++;
+		case OP2_6: // MOD
+			reg[dest] = (int32_t)reg[src1] % (int32_t)reg[src2];
+			status = A3K_RUNNING;
+			break;
+		default:
+			status = A3K_IO_ERR;
 		}
-		status = RUNNING;
-		break;
-	case BGZ:
-		if (reg[0] > 0) {
-			imm = extend_imm(insn >> 4, 12);
-			pc = pc + imm;
-		} else {
-			pc++;
+		pc++;
+		
+	} else if (op1 == BITWISE) {
+		switch (op2) {
+		case OP2_0: // AND
+			reg[dest] = (int32_t)reg[src1] & (int32_t)reg[src2];
+			status = A3K_RUNNING;
+			break;
+		case OP2_1: // ANDI
+			reg[dest] = (int32_t)reg[src1] & imm14;
+			status = A3K_RUNNING;
+			break;
+		case OP2_2: // OR
+			reg[dest] = (int32_t)reg[src1] | (int32_t)reg[src2];
+			status = A3K_RUNNING;
+			break;
+		case OP2_3: // ORI
+			reg[dest] = (int32_t)reg[src1] | imm14;
+			status = A3K_RUNNING;
+			break;
+		case OP2_4: // XOR
+			reg[dest] = (int32_t)reg[src1] ^ (int32_t)reg[src2];
+			status = A3K_RUNNING;
+			break;
+		case OP2_5: // XORI
+			reg[dest] = (int32_t)reg[src1] ^ imm14;
+			status = A3K_RUNNING;
+			break;
+		default:
+			status = A3K_IO_ERR;
 		}
-		status = RUNNING;
-		break;
-	case JMP:
-		imm = extend_imm(insn >> 4, 12);
-		pc = pc + imm;
-		status = RUNNING;
-		break;
-	case JSR:
-		imm = extend_imm(insn >> 4, 12);
-		reg[8] = pc + 1;
-		pc = pc + imm;
-		status = RUNNING;
-		break;
-	case RET:
-		pc = reg[8];
-		status = RUNNING;
-		break;
-	case END:
-		status = IDLE;
-		break;
-	default:
-		status = IDLE;
+		pc++;
+		
+	} else if (op1 == MEM) {
+		switch (op2) {
+		case OP2_0: // LDI
+			reg[dest] = imm19;
+			status = A3K_RUNNING;
+			break;
+		case OP2_1: // LD
+			if (imm_addr < current_mem_size()) {
+				reg[dest] = mem[imm_addr];
+				status = A3K_RUNNING;
+			} else {
+				status = A3K_OUT_OF_RANGE;
+			}
+			break;
+		case OP2_2: // ST
+			if (imm_addr < current_mem_size()) {
+				mem[imm_addr] = reg[dest];
+				status = A3K_RUNNING;
+			} else {
+				status = A3K_OUT_OF_RANGE;
+			}
+			break;
+		case OP2_3: // LPC
+			reg[dest] = pc;
+			status = A3K_RUNNING;
+			break;
+		case OP2_4: // STR
+			if (reg[src1] < current_mem_size()) {
+				mem[reg[src1]] = reg[dest];
+				status = A3K_RUNNING;
+			} else {
+				status = A3K_OUT_OF_RANGE;
+			}
+			break;
+		case OP2_5: // LDR
+			if (reg[src1] < current_mem_size()) {
+				reg[dest] = mem[reg[src1]];
+				status = A3K_RUNNING;
+			} else {
+				status = A3K_OUT_OF_RANGE;
+			}
+			break;
+		default:
+			status = A3K_IO_ERR;
+		}
+		pc++;
+
+	} else if (op1 == SHIFT) {
+		switch (op2) {
+		case OP2_0: // SL
+			reg[dest] = reg[src1] >> (reg[src2] & IMM_SHIFT_MASK);
+			status = A3K_RUNNING;
+			break;
+		case OP2_1: // SLI
+			reg[dest] = reg[src1] >> (imm14 & IMM_SHIFT_MASK);
+			status = A3K_RUNNING;
+			break;
+		case OP2_2: // SR
+			reg[dest] = reg[src1] << (reg[src2] & IMM_SHIFT_MASK);
+			status = A3K_RUNNING;
+			break;
+		case OP2_3: // SRI
+			reg[dest] = reg[src1] << (imm14 & IMM_SHIFT_MASK);
+			status = A3K_RUNNING;
+			break;
+		default:
+			status = A3K_IO_ERR;
+		}
+		pc++;
+		
+	} else if (op1 == JUMP) {
+		switch (op2) {
+		case OP2_0: // J
+			pc = pc + (int32_t)imm_offset;
+			status = A3K_RUNNING;
+			break;
+		case OP2_1: // JR
+			pc = (int32_t)reg[dest];
+			status = A3K_RUNNING;
+			break;
+		case OP2_2: // JSR
+			reg[31] = pc + 1;
+			pc = pc + (int32_t)imm_offset;
+			status = A3K_RUNNING;
+			break;
+		case OP2_3: // RET
+			pc = reg[31];
+			status = A3K_RUNNING;
+			break;
+		case OP2_4: // BLZ
+			if ((int32_t)reg[0] < 0)
+				pc = pc + (int32_t)imm_offset;
+			else
+				pc++;
+			status = A3K_RUNNING;
+			break;
+		case OP2_5: // BEZ
+			if (reg[0] == 0)
+				pc = pc + (int32_t)imm_offset;
+			else
+				pc++;
+			status = A3K_RUNNING;
+			break;
+		case OP2_6: // BGZ
+			if ((int32_t)reg[0] > 0)
+				pc = pc + (int32_t)imm_offset;
+			else
+				pc++;
+			status = A3K_RUNNING;
+			break;
+		default:
+			status = A3K_IO_ERR;
+		}
+	} else if (op1 == END) {
+		status = A3K_IDLE;
+	} else {
+		status = A3K_IO_ERR;
 	}
 
 	return status;

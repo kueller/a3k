@@ -27,3 +27,4 @@ clean:
 spotless: clean
 	rm -f ${ASSEMBLER}
 	rm -f ${VMACHINE}
+	cd ./${VMACHINE} && make spotless

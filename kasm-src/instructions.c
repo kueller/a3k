@@ -27,6 +27,8 @@ InstructionList *new_instruction_list()
 	new->end = NULL;
 	new->pc = NULL;
 
+	new->var_list = NULL;
+
 	new->size = 0;
 
 	return new;
@@ -52,6 +54,51 @@ void instruction_list_free(InstructionList *list)
 		}
 
 		free(list);
+	}
+}
+
+void instruction_list_remove(InstructionList *list, int index)
+{
+	if (!list) kasm_exit("Passed null instruction list to remove.", 0);
+	if (index < 0 || index > (list->size - 1))
+		kasm_exit("Out of range index for instruction remove.", 0);
+
+	if (!list->start) return;
+
+	if (list->size == 1) {
+		instruction_free(list->start);
+		list->start = NULL;
+		list->end = NULL;
+		list->size--;
+	} else {
+		if (index == 0) {
+			Instruction *tmp = list->start;
+			list->start->next->prev = NULL;
+			list->start = list->start->next;
+			instruction_free(tmp);
+			list->size--;
+		} else if (index == (list->size - 1)) {
+			Instruction *tmp = list->end;
+			list->end->prev->next = NULL;
+			list->end = list->end->prev;
+			instruction_free(tmp);
+			list->size--;
+		} else {
+			Instruction *current = list->start;
+			int scroll;
+			for (scroll = 0; scroll < index; scroll++)
+				current = current->next;
+			current->prev->next = current->next;
+			current->next->prev = current->prev;
+			instruction_free(current);
+			list->size--;
+		}
+	}
+
+	Instruction *current = list->start;
+	while (current) {
+		current->index--;
+		current = current->next;
 	}
 }
 

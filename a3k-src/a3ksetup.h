@@ -5,50 +5,87 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define ADD  0b0001
-#define ADDI 0b0010
-#define AND  0b0011
-#define INV  0b0100
-#define MULT 0b0101
-#define DIV  0b0110
-#define MOD  0b0111
-#define LDI  0b1000
-#define BLZ  0b1001
-#define BEZ  0b1010
-#define BGZ  0b1011
-#define JMP  0b1100
-#define JSR  0b1101
-#define RET  0b1110
-#define END  0b1111
+#define TYPE_DATA  0b01
+#define TYPE_ARRAY 0b10
 
-#define OP_MASK  0x000f
-#define REG_MASK 0x0007
+#define ARITHMETIC 0b00000
+#define BITWISE    0b00001
+#define MEM        0b00010
+#define SHIFT      0b00011
+#define JUMP       0b00100
+#define END        0b11111
 
-#define IMM6_EXT  0xffc0
-#define IMM9_EXT  0xfe00
-#define IMM12_EXT 0xf000
+#define	OP2_0 0b000
+#define	OP2_1 0b001
+#define	OP2_2 0b010
+#define	OP2_3 0b011
+#define	OP2_4 0b100
+#define	OP2_5 0b101
+#define	OP2_6 0b110
+#define	OP2_7 0b111
+
+#define OP_MASK  0x0000001f
+#define OP2_MASK 0x00000007
+#define REG_MASK 0x0000001f
+
+#define IMM_EXT14 0xffffc000
+#define IMM_EXT19 0xfff80000
+#define IMM_EXT24 0xff000000
+
+#define IMM_SHIFT_MASK 0x0000001f
+
+#define DEFAULT_REG_SIZE 32
+#define DEFAULT_MEM_SIZE 4000
+#define DEFAULT_VID_MEM_SIZE 800
+
+// Return codes
+#define A3K_RUNNING   0
+#define A3K_IDLE      1
+#define A3K_OVERFLOW -1
+#define A3K_MEM_ERR   2
+#define A3K_NULL_PTR  3
+#define A3K_IO_ERR    4
+#define A3K_OUT_OF_RANGE 5
+#define A3K_DIVIDE_BY_ZERO 6
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 	/*
-	 * Returns the length of the instruction register.
+	 * Returns the length of memory;
 	 * 0 if the register has not been initialized.
 	 */
-	int isr_length();
+	uint32_t current_mem_size();
+
+	/*
+	 * Returns the offset to data (program size + 1)
+	 * 0 if nothing has been initialized
+	 */
+	uint32_t program_offset();
 
 	/*
 	 * Initializes the memory register.
-	 * An int array of length 9. 8 registers are addressable by instructions.
-	 * Register 9 stores the return address from JSR calls for RET.
+	 * Returns an array of length 32.
+	 * Returns NULL on failure.
 	 */
-	int *initialize_regfile();
+	uint32_t *initialize_regfile();
+
+	/*
+	 * Initializes the memory for the program.
+	 * Memory consists of a base memory size and then a chunk of video
+	 * memory, size specified by DEFAULT_VID_MEM_SIZE.
+	 * The base memory size is 100 entries, defined by DEFAULT_MEM_SIZE.
+	 * Base memory will include program and user data.
+	 * Returns null on failure.
+	 */
+	uint32_t *initialize_memory();
 
 	/*
 	 * Creates the instruction register from the given input binary file.
-	 * Returns NULL on any errors.
+	 * Returns an A3K code (defined above).
+	 * A3K_IDLE means success.
 	 */
-        uint16_t *initialize_instruction_reg(const char *);
+	int load_program(uint32_t *mem, const char *filename);
 #ifdef __cplusplus
 }
 #endif

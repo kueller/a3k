@@ -2,14 +2,18 @@
 #define A3K_H
 
 #include <QMainWindow>
-#include <QStandardItemModel>
-#include <QTimer>
 #include <QFileDialog>
+#include <QTimer>
 #include <cstdint>
 
-#include "instructionops.h"
 #include "../a3ksetup.h"
 #include "../execute.h"
+
+// Periods of execution
+#define MIN_SPEED 50
+#define MAX_SPEED 300
+
+/* I don't know C++ I'm sorry. */
 
 namespace Ui {
 class a3k;
@@ -24,38 +28,47 @@ public:
     ~a3k();
 
 private slots:
-    void initialize(QString filename);
-    void load_file();
-    void reset_program();
-    void reset_everything();
-    void populate_lists();
-    void highlight_current();
-    void update_registers();
+    void on_actionLoad_File_triggered();
+
+    void on_actionJump_To_Address_triggered();
+
+    void on_actionShow_Console_triggered();
+
     bool run_next();
 
     void on_runButton_clicked();
 
-    void on_fastButton_clicked();
+    void on_runFastButton_clicked();
 
     void on_stepButton_clicked();
 
-    void on_Pause_clicked();
+    void on_pauseButton_clicked();
 
     void on_stopButton_clicked();
 
-    void on_actionOpen_triggered();
+    void on_actionExit_triggered();
 
-    void on_action50_triggered();
+    void on_actionSet_Speed_triggered();
 
-    void on_action100_2_triggered();
-
-    void on_action200_2_triggered();
-
-    void on_action300_2_triggered();
-
+public slots:
+    void jump_to_address(int);
+    void set_timer_speed(int);
 
 private:
     Ui::a3k *ui;
+    void populate_memory();
+    void populate_reg();
+    void update_memory(int, int);
+    void update_reg(int);
+    void load_file();
+    void initialize_file(QString);
+    void reset_registers();
+    void reset_memory();
+    void reset_program();
+    int memory_changed(uint32_t);
+
+signals:
+    void vidMemoryUpdate(QString, int);
 };
 
 #endif // A3K_H

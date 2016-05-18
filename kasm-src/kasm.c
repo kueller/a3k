@@ -33,9 +33,14 @@ int main(int argc, char **argv)
 	else
 		kasm_exit("No parameters specified. Run kasm --help for more info.", 0);
 
-	InstructionList *list = create_instructions_from_file(filename);
-	assemble(list, outfile);
-	instruction_list_free(list);
+	InstructionList *ilist = create_instructions_from_file(filename);
+	VarList *vlist = setup_variables(ilist);
+	setup_instruction_list(ilist);
+
+	assemble(ilist, vlist, outfile);
+
+	varlist_free(vlist);
+	instruction_list_free(ilist);
 
 	return 0;
 }
